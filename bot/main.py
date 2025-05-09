@@ -8,10 +8,11 @@ from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.utils.markdown import hbold
 from aiogram.client.default import DefaultBotProperties
+from aiogram.filters.command import CommandObject
 from aiogram.types.input_file import FSInputFile
 
 from config import BOT_TOKEN, ADMIN_ID
-from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status
+from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status, get_user_by_username, get_user_info
 from keyboards import main_button, payment_button
 
 
@@ -26,17 +27,12 @@ init_db()
 async def start_handler(message: Message):
     telegram_id = message.from_user.id
     username = message.from_user.username or "unknown"
-    # добавим в БД, если ещё нет
     add_or_update_user(telegram_id, username)
 
     is_active = get_user_status(telegram_id)  # True/False
-
-    # Выбор клавиатуры
     keyboard = main_button if is_active else payment_button
 
-    # Картинка
     photo = FSInputFile("media/welcome.jpg")
-
     await message.answer_photo(
         photo=photo,
         caption="👋 Добро пожаловать в VPN-сервис!\n Дальше идёт заглушка с объяснением оплаты и прочим. Пока текст я не придумал :(",
@@ -63,32 +59,49 @@ async def broadcast(message: Message):
             logging.warning(f"Не удалось отправить сообщение {user_id}: {e}")
     await message.answer(f"Сообщение отправлено {count} пользователям.")
 
-@dp.message(F.text.startswith("/addaccess"))
-async def add_access_handler(message: Message):
+@dp.message(Command("addaccess"))
+async def cmd_add_access(message: Message, command: CommandObject):
     if message.from_user.id != ADMIN_ID:
-        await message.answer("У вас нет прав для этой команды.")
-        return
+        return await message.answer("У тебя нет прав на эту команду.")
 
-    parts = message.text.strip().split(maxsplit=2)
-    if len(parts) < 3:
-        await message.answer("Использование: /addaccess @username vpn_ключ")
-        return
-
-    username = parts[1].lstrip("@")
-    vpn_key = parts[2]
+    if not command.args:
+        return await message.answer("Используй: /addaccess @username ключ")
 
     try:
-        telegram_id = add_access_for_user(username)
+        parts = command.args.split()
+        if len(parts) < 2:
+            return await message.answer("Формат: /addaccess @username ключ")
 
-        if telegram_id is None:
-            await message.answer(f"⚠️ Пользователь @{username} ещё не писал боту. Попроси его сначала отправить любое сообщение.")
-            return
+        username_part = parts[0]
+        key = " ".join(parts[1:])
 
-        await bot.send_message(telegram_id, f"✅ Вам выдан доступ к VPN!\nВот ваш ключ: <code>{vpn_key}</code>", parse_mode="HTML")
-        await message.answer(f"Пользователь @{username} получил доступ.")
+        username = username_part.lstrip('@')
+        user = get_user_by_username(username)
+
+        if not user:
+            return await message.answer(f"Пользователь @{username} не найден в базе.")
+
+        telegram_id = user["telegram_id"]
+
+        add_access_for_user(telegram_id, key)
+
+        await bot.send_message(
+            chat_id=telegram_id,
+            text=f"✅ Оплата подтверждена!\nВот твой ключ от VPN:\n\n<code>{key}</code>",
+            parse_mode=ParseMode.HTML,
+        )
+
+        await bot.send_message(
+            chat_id=telegram_id,
+            text="Выбери нужный раздел:",
+            reply_markup=main_button
+        )
+
+        await message.answer(f"Доступ выдан пользователю @{username}")
 
     except Exception as e:
-        await message.answer(f"Произошла ошибка: {e}")
+        await message.answer(f"Ошибка: {e}")
+
 
 @dp.message(F.photo)
 async def handle_photo_receipt(message: Message):

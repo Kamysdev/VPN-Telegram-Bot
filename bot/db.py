@@ -35,6 +35,7 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 telegram_id BIGINT UNIQUE NOT NULL,
                 username TEXT,
+                vpn_key TEXT,
                 payment_due DATE,
                 is_active BOOLEAN DEFAULT TRUE
             );
@@ -73,21 +74,24 @@ def get_all_users():
         return [row[0] for row in cur.fetchall()]
 
 
-def add_access_for_user(username: str) -> int | None:
+def add_access_for_user(telegram_id: str, vpn_key: str) -> int | None:
     with get_cursor() as cur:
-        cur.execute("SELECT telegram_id FROM users WHERE username = %s;", (username,))
+        cur.execute("SELECT telegram_id FROM users WHERE telegram_id = %s;", (telegram_id,))
         result = cur.fetchone()
 
         if not result:
-            return None  # Пользователь не найден
+            return None
 
         telegram_id = result[0]
 
         cur.execute("""
             UPDATE users 
-            SET payment_due = %s, is_active = TRUE 
+            SET payment_due = %s, is_active = TRUE, vpn_key = %s
             WHERE telegram_id = %s;
-        """, (date.today() + timedelta(days=30), telegram_id))
+        """, (date.today() + timedelta(days=30), vpn_key, telegram_id))
+
+        return telegram_id
+
 
         return telegram_id
 
@@ -96,3 +100,31 @@ def get_user_status(telegram_id: int) -> bool:
         cur.execute("SELECT is_active FROM users WHERE telegram_id = %s;", (telegram_id,))
         row = cur.fetchone()
         return row[0] if row else False
+
+def get_user_by_username(username: str) -> dict | None:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT telegram_id, username, payment_due, is_active
+            FROM users
+            WHERE username = %s;
+        """, (username,))
+        row = cur.fetchone()
+
+        if row:
+            return {
+                "telegram_id": row[0],
+                "username": row[1],
+                "payment_due": row[2],
+                "is_active": row[3],
+            }
+        return None
+
+def get_user_info(telegram_id: int) -> dict | None:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT payment_due, vpn_key FROM users WHERE telegram_id = %s;
+        """, (telegram_id,))
+        row = cur.fetchone()
+        if row:
+            return {"payment_due": row[0], "vpn_key": row[1]}
+        return None
