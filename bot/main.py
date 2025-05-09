@@ -105,7 +105,6 @@ async def cmd_add_access(message: Message, command: CommandObject):
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
 
-
 ## Домашняя страница (с ключом ВПН)
 @dp.callback_query(lambda c: c.data == "home_page")
 async def show_home_page(callback: CallbackQuery):
@@ -120,11 +119,9 @@ async def show_home_page(callback: CallbackQuery):
         )
     else:
         msg = "Данные не найдены. Обратитесь к администратору."
-    
 
     await callback.message.edit_text(msg, reply_markup=home_page_button, parse_mode="Markdown")
     await callback.answer()
-
 
 ## Быстрый репорт проблемы
 @dp.callback_query(lambda c: c.data == "report_problem")
@@ -140,7 +137,6 @@ async def report_issue(callback: CallbackQuery):
     await callback.message.edit_text("🛠 Спасибо, проблема передана. Мы постараемся исправить неполадки как можно скорее! 🤗", reply_markup=home_page_button, parse_mode="Markdown")
     await callback.answer()
 
-
 ## Возврат в меню
 @dp.callback_query(lambda c: c.data == "back_to_main")
 async def back_to_main(callback: CallbackQuery):
@@ -152,7 +148,6 @@ async def back_to_main(callback: CallbackQuery):
     await callback.message.edit_text("👋 Добро пожаловать в VPN-сервис!\nВыберите действие из меню ниже:", reply_markup=keyboard)
     await callback.answer()
 
-
 ## Инлайн меню
 @dp.message(F.text == "📋 Меню")
 async def handle_reply_menu(message: Message):
@@ -162,7 +157,6 @@ async def handle_reply_menu(message: Message):
 
     if is_active:
         await message.answer("👋 Добро пожаловать в VPN-сервис!\nВыберите действие из меню ниже:", reply_markup=keyboard)
-
 
 ## Сообщение об ошибке
 @dp.message(F.text == "🛠 Связаться с администрацией")
@@ -181,6 +175,32 @@ async def handle_admin_message(message: Message, state: FSMContext):
     await message.answer("✅ Ваше сообщение отправлено администратору. Спасибо!")
     await state.clear()
 
+## Поддержка
+@dp.callback_query(lambda c: c.data == "support")
+async def support_callback(callback: CallbackQuery):
+    await callback.message.edit_text("🛟 Выберите действие:", reply_markup=FAQ_button)
+    await callback.answer()
+
+@dp.callback_query(lambda c: c.data == "faq")
+async def support_callback(callback: CallbackQuery):
+    await callback.message.edit_text("A. Это безопасный VPN? " \
+    "\nБ. Абсолютно! Сервера находятся в Европе, а подключение происходит с использованием современных протоколов", reply_markup=home_page_button)
+    await callback.answer()
+
+@dp.callback_query(lambda c: c.data == "connect_to_vpn")
+async def support_callback(callback: CallbackQuery):
+    await callback.message.edit_text("Используйте Outline или AmneziaVPN", reply_markup=home_page_button)
+    await callback.answer()
+
+@dp.callback_query(lambda c: c.data == "speedtest")
+async def support_callback(callback: CallbackQuery):
+    await callback.message.edit_text("🛸 speedtest.net", reply_markup=home_page_button)
+    await callback.answer()
+
+@dp.callback_query(lambda c: c.data == "troubleshooting")
+async def support_callback(callback: CallbackQuery):
+    await callback.message.edit_text("Сперва проверьте скорость соединения без подключенного VPN. Если скорость с включенным VPN в 2-2.5 раза меньше, чем без него, то всё в пределах нормы", reply_markup=home_page_button)
+    await callback.answer()
 
 ## Обработчик чеков. Оставить последней функцией в этом файле
 @dp.message(F.photo)
