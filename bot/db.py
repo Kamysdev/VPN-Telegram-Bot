@@ -128,3 +128,31 @@ def get_user_info(telegram_id: int) -> dict | None:
         if row:
             return {"payment_due": row[0], "vpn_key": row[1]}
         return None
+
+def get_all_users_with_due_date(days_before: int = 3):
+    target_date = date.today() + timedelta(days=days_before)
+
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT telegram_id, payment_due
+            FROM users
+            WHERE is_active = TRUE AND payment_due <= %s;
+        """, (target_date,))
+        return [{"telegram_id": row[0], "payment_due": row[1]} for row in cur.fetchall()]
+
+def extend_payment_by_telegram_id(telegram_id: int):
+    with get_cursor() as cur:
+        # Обновляем дату окончания оплаты на месяц вперед
+        new_payment_due = date.today() + timedelta(days=30)
+
+        cur.execute("""
+            UPDATE users
+            SET payment_due = %s
+            WHERE telegram_id = %s AND is_active = TRUE;
+        """, (new_payment_due, telegram_id))
+
+        # Проверяем, был ли обновлен пользователь
+        if cur.rowcount > 0:
+            return True  # Успешно обновили
+        else:
+            return False  # Не нашли активного пользователя с таким ID
