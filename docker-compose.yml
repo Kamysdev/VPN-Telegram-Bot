@@ -3,8 +3,7 @@ version: '3.8'
 services:
   bot:
     build:
-      context: ..
-      dockerfile: ./docker/Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: vpn_payment_bot
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
