@@ -234,7 +234,7 @@ async def support_callback(callback: CallbackQuery):
 
 @dp.callback_query(lambda c: c.data == "troubleshooting")
 async def support_callback(callback: CallbackQuery):
-    await callback.message.edit_text("Сперва проверьте скорость соединения без подключенного VPN. Если скорость с включенным VPN в 2-2.5 раза меньше, чем без него, то всё в пределах нормы", reply_markup=home_page_button)
+    await callback.message.edit_text("Сперва проверьте скорость соединения без подключенного VPN. Если скорость с включенным VPN в 2-2.5 раза меньше, чем без него, то всё в порядке", reply_markup=home_page_button)
     await callback.answer()
 
 
