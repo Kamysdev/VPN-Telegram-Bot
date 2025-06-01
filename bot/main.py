@@ -69,24 +69,33 @@ async def cmd_add_access(message: Message, command: CommandObject):
         return await message.answer("У тебя нет прав на эту команду.")
 
     if not command.args:
-        return await message.answer("Используй: /addaccess @username ключ")
+        return await message.answer("Используй: /addaccess @username|id ключ")
 
     try:
         parts = command.args.split()
         if len(parts) < 2:
-            return await message.answer("Формат: /addaccess @username ключ")
+            return await message.answer("Формат: /addaccess @username|id ключ")
 
-        username_part = parts[0]
+        user_part = parts[0]
         key = " ".join(parts[1:])
 
-        username = username_part.lstrip('@')
-        user = get_user_by_username(username)
+        # Определяем, что введено — username или telegram_id
+        if user_part.startswith("@"):
+            username = user_part.lstrip('@')
+            user = get_user_by_username(username)
+            if not user:
+                return await message.answer(f"Пользователь @{username} не найден в базе.")
+            telegram_id = user["telegram_id"]
+        else:
+            try:
+                telegram_id = int(user_part)
+                user = get_user_by_telegram_id(telegram_id)
+                if not user:
+                    return await message.answer(f"Пользователь с ID {telegram_id} не найден в базе.")
+            except ValueError:
+                return await message.answer("Неверный формат ID. Используй: /addaccess @username|id ключ")
 
-        if not user:
-            return await message.answer(f"Пользователь @{username} не найден в базе.")
-
-        telegram_id = user["telegram_id"]
-
+        # Выдаём доступ
         add_access_for_user(telegram_id, key)
 
         await bot.send_message(
@@ -101,10 +110,11 @@ async def cmd_add_access(message: Message, command: CommandObject):
             reply_markup=main_button
         )
 
-        await message.answer(f"Доступ выдан пользователю @{username}")
+        await message.answer(f"Доступ выдан пользователю {'@' + username if user_part.startswith('@') else telegram_id}")
 
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
+
 
 @dp.message(Command("extend"))
 async def handle_extend_by_username(message: Message):
