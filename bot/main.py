@@ -17,7 +17,7 @@ from datetime import date, timedelta
 
 
 from config import BOT_TOKEN, ADMIN_ID
-from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status, get_user_by_username, get_user_info, get_all_users_with_due_date, extend_payment_by_telegram_id
+from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status, get_user_by_username, get_user_by_telegram_id, get_user_info, get_all_users_with_due_date, extend_payment_by_telegram_id
 from keyboards import main_button, home_page_button, undermenu_keyboard, FAQ_button
 from states import ContactAdminStates
 
@@ -114,7 +114,6 @@ async def cmd_add_access(message: Message, command: CommandObject):
 
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
-
 
 @dp.message(Command("extend"))
 async def handle_extend_by_username(message: Message):

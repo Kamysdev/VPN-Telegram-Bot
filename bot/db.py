@@ -119,6 +119,24 @@ def get_user_by_username(username: str) -> dict | None:
             }
         return None
 
+def get_user_by_telegram_id(telegram_id: int) -> dict | None:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT telegram_id, username, payment_due, is_active
+            FROM users
+            WHERE telegram_id = %s;
+        """, (telegram_id,))
+        row = cur.fetchone()
+
+        if row:
+            return {
+                "telegram_id": row[0],
+                "username": row[1],
+                "payment_due": row[2],
+                "is_active": row[3],
+            }
+        return None
+
 def get_user_info(telegram_id: int) -> dict | None:
     with get_cursor() as cur:
         cur.execute("""
