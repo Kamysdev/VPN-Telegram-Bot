@@ -17,7 +17,7 @@ from datetime import date, timedelta
 
 
 from config import BOT_TOKEN, ADMIN_ID
-from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status, get_user_by_username, get_user_by_telegram_id, get_user_info, get_all_users_with_due_date, extend_payment_by_telegram_id, add_vpn_key, get_vpn_keys_by_telegram_id
+from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status, get_user_by_username, get_user_by_telegram_id, get_user_info, get_all_users_with_due_date, extend_payment_by_telegram_id, add_vpn_key, get_vpn_keys_by_telegram_id, get_user_keys
 from keyboards import main_button, home_page_button, undermenu_keyboard, FAQ_button
 from states import ContactAdminStates
 
@@ -162,7 +162,7 @@ async def test_notify(message: Message):
 async def show_home_page(callback: CallbackQuery):
     telegram_id = callback.from_user.id
     info = get_user_info(telegram_id)
-    keys = get_vpn_keys_by_telegram_id(telegram_id)  # Новая функция: возвращает список словарей с ключами и странами
+    keys = get_user_keys(telegram_id)  # Новая функция: возвращает список словарей с ключами и странами
 
     if info:
         msg = f"🏠 *Домашняя страница*\n\n"
