@@ -48,7 +48,14 @@ def init_db():
                 message TEXT
             );
         """)
-
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS vpn_keys (
+                id SERIAL PRIMARY KEY,
+                telegram_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
+                label TEXT,
+                key TEXT NOT NULL
+            );
+        """)
 
 def log_message(user_id: int, message: str):
     with get_cursor() as cur:
@@ -174,3 +181,22 @@ def extend_payment_by_telegram_id(telegram_id: int):
             return True  # Успешно обновили
         else:
             return False  # Не нашли активного пользователя с таким ID
+        
+def add_vpn_key(telegram_id: int, key: str, label: str = None):
+    with get_cursor() as cur:
+        cur.execute("""
+            INSERT INTO vpn_keys (telegram_id, key, label)
+            VALUES (%s, %s, %s);
+        """, (telegram_id, key, label))
+
+def get_vpn_keys_by_telegram_id(telegram_id: int) -> list[dict]:
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT id, key, label
+            FROM vpn_keys
+            WHERE telegram_id = %s;
+        """, (telegram_id,))
+        return [
+            {"id": row[0], "key": row[1], "label": row[2]}
+            for row in cur.fetchall()
+        ]

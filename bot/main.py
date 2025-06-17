@@ -17,7 +17,7 @@ from datetime import date, timedelta
 
 
 from config import BOT_TOKEN, ADMIN_ID
-from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status, get_user_by_username, get_user_by_telegram_id, get_user_info, get_all_users_with_due_date, extend_payment_by_telegram_id
+from db import init_db, add_or_update_user, log_message, get_all_users, add_access_for_user, get_user_status, get_user_by_username, get_user_by_telegram_id, get_user_info, get_all_users_with_due_date, extend_payment_by_telegram_id, add_vpn_key, get_vpn_keys_by_telegram_id
 from keyboards import main_button, home_page_button, undermenu_keyboard, FAQ_button
 from states import ContactAdminStates
 
@@ -69,15 +69,16 @@ async def cmd_add_access(message: Message, command: CommandObject):
         return await message.answer("У тебя нет прав на эту команду.")
 
     if not command.args:
-        return await message.answer("Используй: /addaccess @username|id ключ")
+        return await message.answer("Используй: /addaccess @username|id ключ страна")
 
     try:
         parts = command.args.split()
-        if len(parts) < 2:
-            return await message.answer("Формат: /addaccess @username|id ключ")
+        if len(parts) < 3:
+            return await message.answer("Формат: /addaccess @username|id ключ страна")
 
         user_part = parts[0]
-        key = " ".join(parts[1:])
+        key = parts[1]
+        country = " ".join(parts[2:])
 
         # Определяем, что введено — username или telegram_id
         if user_part.startswith("@"):
@@ -92,15 +93,21 @@ async def cmd_add_access(message: Message, command: CommandObject):
                 user = get_user_by_telegram_id(telegram_id)
                 if not user:
                     return await message.answer(f"Пользователь с ID {telegram_id} не найден в базе.")
+                username = user["username"] or "unknown"
             except ValueError:
-                return await message.answer("Неверный формат ID. Используй: /addaccess @username|id ключ")
+                return await message.answer("Неверный формат ID. Используй: /addaccess @username|id ключ страна")
 
-        # Выдаём доступ
-        add_access_for_user(telegram_id, key)
+        # Добавляем ключ в таблицу vpn_keys
+        add_vpn_key(telegram_id, key, country)
 
+        # Сообщение пользователю
         await bot.send_message(
             chat_id=telegram_id,
-            text=f"✅ Оплата подтверждена!\nВот твой ключ от VPN:\n\n<code>{key}</code>",
+            text=(
+                f"✅ Оплата подтверждена!\n"
+                f"Вот твой ключ от VPN для подключения из <b>{country}</b>:\n\n"
+                f"<code>{key}</code>"
+            ),
             parse_mode=ParseMode.HTML,
         )
 
@@ -114,6 +121,7 @@ async def cmd_add_access(message: Message, command: CommandObject):
 
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
+
 
 @dp.message(Command("extend"))
 async def handle_extend_by_username(message: Message):
@@ -154,18 +162,25 @@ async def test_notify(message: Message):
 async def show_home_page(callback: CallbackQuery):
     telegram_id = callback.from_user.id
     info = get_user_info(telegram_id)
+    keys = get_vpn_keys_by_telegram_id(telegram_id)  # Новая функция: возвращает список словарей с ключами и странами
 
     if info:
-        msg = (
-            f"🏠 *Домашняя страница*\n\n"
-            f"🔑 Ваш VPN ключ: `{info['vpn_key']}`\n"
-            f"📅 Оплачено до: *{info['payment_due'].strftime('%d.%m.%Y')}*"
-        )
+        msg = f"🏠 *Домашняя страница*\n\n"
+
+        if keys:
+            msg += "🔑 *Ваши VPN ключи:*\n"
+            for k in keys:
+                msg += f"`{k['key']}` — {k['country']}\n"
+        else:
+            msg += "🔑 У вас пока нет выданных VPN-ключей.\n"
+
+        msg += f"\n📅 *Оплачено до:* `{info['payment_due'].strftime('%d.%m.%Y')}`"
     else:
         msg = "Данные не найдены. Обратитесь к администратору."
 
     await callback.message.edit_text(msg, reply_markup=home_page_button, parse_mode="Markdown")
     await callback.answer()
+
 
 ## Быстрый репорт проблемы
 @dp.callback_query(lambda c: c.data == "report_problem")
