@@ -204,7 +204,7 @@ def get_vpn_keys_by_telegram_id(telegram_id: int) -> list[dict]:
 def get_user_keys(telegram_id: int) -> list[dict]:
     with get_cursor() as cur:
         cur.execute("""
-            SELECT key, country FROM vpn_keys
+            SELECT key, label FROM vpn_keys
             WHERE telegram_id = %s;
         """, (telegram_id,))
         return [{"key": row[0], "country": row[1]} for row in cur.fetchall()]
